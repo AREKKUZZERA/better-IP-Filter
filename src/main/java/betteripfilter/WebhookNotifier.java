@@ -17,8 +17,8 @@ public class WebhookNotifier {
     public WebhookNotifier(Logger logger) {
         this.logger = logger;
         this.client = HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .build();
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
     }
 
     public void send(String url, int timeoutMs, DenyReason reason, String name, String ip) {
@@ -27,17 +27,17 @@ public class WebhookNotifier {
         }
         String payload = buildPayload(reason, name, ip);
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .timeout(Duration.ofMillis(timeoutMs))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(payload))
-            .build();
+                .uri(URI.create(url))
+                .timeout(Duration.ofMillis(timeoutMs))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(payload))
+                .build();
 
         client.sendAsync(request, HttpResponse.BodyHandlers.discarding())
-            .exceptionally(ex -> {
-                logger.log(Level.FINE, "Failed to send webhook notification", ex);
-                return null;
-            });
+                .exceptionally(ex -> {
+                    logger.log(Level.FINE, "Failed to send webhook notification", ex);
+                    return null;
+                });
     }
 
     private String buildPayload(DenyReason reason, String name, String ip) {
@@ -45,14 +45,14 @@ public class WebhookNotifier {
         String safeIp = Objects.requireNonNullElse(ip, "");
         String time = Instant.now().toString();
         return new StringBuilder(200)
-            .append('{')
-            .append("\"plugin\":\"Better-IP-Filter\",")
-            .append("\"reason\":\"").append(reason.name()).append("\",")
-            .append("\"name\":\"").append(escapeJson(safeName)).append("\",")
-            .append("\"ip\":\"").append(escapeJson(safeIp)).append("\",")
-            .append("\"time\":\"").append(time).append("\"")
-            .append('}')
-            .toString();
+                .append('{')
+                .append("\"plugin\":\"Better-IP-Filter\",")
+                .append("\"reason\":\"").append(reason.name()).append("\",")
+                .append("\"name\":\"").append(escapeJson(safeName)).append("\",")
+                .append("\"ip\":\"").append(escapeJson(safeIp)).append("\",")
+                .append("\"time\":\"").append(time).append("\"")
+                .append('}')
+                .toString();
     }
 
     private String escapeJson(String value) {

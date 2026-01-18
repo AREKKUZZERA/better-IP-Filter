@@ -297,9 +297,9 @@ public class IpStore {
 
     private String intToIp(int value) {
         return (value >>> 24 & 0xFF) + "." +
-            (value >>> 16 & 0xFF) + "." +
-            (value >>> 8 & 0xFF) + "." +
-            (value & 0xFF);
+                (value >>> 16 & 0xFF) + "." +
+                (value >>> 8 & 0xFF) + "." +
+                (value & 0xFF);
     }
 
     private enum EntryType {

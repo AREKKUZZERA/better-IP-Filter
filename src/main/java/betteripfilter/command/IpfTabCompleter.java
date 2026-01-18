@@ -32,7 +32,7 @@ public class IpfTabCompleter implements TabCompleter {
     private List<String> filterPrefix(List<String> options, String prefix) {
         String lower = prefix.toLowerCase(Locale.ROOT);
         return options.stream()
-            .filter(option -> option.toLowerCase(Locale.ROOT).startsWith(lower))
-            .collect(Collectors.toList());
+                .filter(option -> option.toLowerCase(Locale.ROOT).startsWith(lower))
+                .collect(Collectors.toList());
     }
 }

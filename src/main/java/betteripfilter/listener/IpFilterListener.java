@@ -28,10 +28,10 @@ public class IpFilterListener implements Listener {
         String name = event.getName();
 
         if (plugin.isRateLimitEnabled()) {
-            if (!plugin.getRateLimiter().tryAcquire(ip, plugin.getRateLimitWindowMillis(), plugin.getRateLimitMaxAttempts())) {
+            if (!plugin.getRateLimiter().tryAcquire(ip, plugin.getRateLimitWindowMillis(),
+                    plugin.getRateLimitMaxAttempts())) {
                 event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
-                    plugin.prefixed(plugin.getRateLimitMessage())
-                );
+                        plugin.prefixed(plugin.getRateLimitMessage()));
                 plugin.handleDenied(DenyReason.RATE_LIMIT, name, ip);
                 return;
             }
@@ -40,8 +40,7 @@ public class IpFilterListener implements Listener {
         if (!store.isAvailable()) {
             if (plugin.isFailsafeDenyAll()) {
                 event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
-                    plugin.prefixed(plugin.getFailsafeMessage())
-                );
+                        plugin.prefixed(plugin.getFailsafeMessage()));
                 plugin.handleDenied(DenyReason.FAILSAFE, name, ip);
             }
             return;
@@ -49,8 +48,7 @@ public class IpFilterListener implements Listener {
 
         if (!store.isAllowed(ip)) {
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST,
-                plugin.prefixed(plugin.msg("notAllowed"))
-            );
+                    plugin.prefixed(plugin.msg("notAllowed")));
             plugin.handleDenied(DenyReason.NOT_WHITELISTED, name, ip);
         }
     }

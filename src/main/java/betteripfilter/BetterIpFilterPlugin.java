@@ -75,7 +75,8 @@ public class BetterIpFilterPlugin extends JavaPlugin {
         int windowSeconds = Math.max(1, getConfig().getInt("ratelimit.window-seconds", 10));
         rateLimitWindowMillis = windowSeconds * 1000L;
         rateLimitMaxAttempts = Math.max(1, getConfig().getInt("ratelimit.max-attempts", 5));
-        rateLimitMessage = getConfig().getString("ratelimit.message", "&cToo many connection attempts. Try again later.");
+        rateLimitMessage = getConfig().getString("ratelimit.message",
+                "&cToo many connection attempts. Try again later.");
 
         String failsafeMode = getConfig().getString("failsafe.mode", "DENY_ALL").toUpperCase(Locale.ROOT);
         failsafeDenyAll = "DENY_ALL".equals(failsafeMode);
@@ -187,7 +188,7 @@ public class BetterIpFilterPlugin extends JavaPlugin {
         }
         File logFile = new File(getDataFolder(), deniedLogFileName);
         try (BufferedWriter writer = Files.newBufferedWriter(logFile.toPath(),
-            StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
             writer.write(line);
             writer.newLine();
         } catch (IOException e) {
