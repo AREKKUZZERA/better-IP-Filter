@@ -17,8 +17,11 @@ It performs early IP validation during the login process and blocks connections 
 - Toggleable filtering without server restart  
 - Extremely lightweight (O(1) lookups)  
 - No external dependencies  
-- IPv4 validation  
+- IPv4 validation (exact, CIDR, and ranges)  
 - Persistent storage (`ips.yml`)  
+- Proxy trusted-forwarded IP gate (no header parsing)  
+- Optional rate limiting and failsafe behavior  
+- Optional webhook notifications  
 - Fully compatible with LuckPerms (Bukkit permissions)
 
 ---
@@ -51,22 +54,72 @@ The plugin configuration is located in `config.yml`.
 enabled: true
 
 messages:
-  prefix: "&7[&aIPF&7]&r "
-  notAllowed: "&cAccess denied. Your IP is not whitelisted."
+  prefix: "&7[&bBetter-IP-Filter&7] &r"
+  notAllowed: "&cYour IP address is not allowed on this server."
   enabled: "&aIP filtering enabled."
   disabled: "&eIP filtering disabled."
   added: "&aAdded IP: &f{ip}"
+  alreadyExists: "&eIP already exists: &f{ip}"
   removed: "&aRemoved IP: &f{ip}"
   notFound: "&cIP not found: &f{ip}"
-  invalidIp: "&cInvalid IP: &f{ip}"
-  listHeader: "&7Whitelisted IPs (&f{count}&7):"
-  noPermission: "&cNo permission."
+  failedUpdate: "&cFailed to update whitelist."
+  storeUnavailable: "&cWhitelist storage unavailable."
+  invalidIp: "&cInvalid IP address: &f{ip}"
+  listHeader: "&bWhitelisted entries &7({count})&b:"
+  noPermission: "&cYou do not have permission to do that."
+  reloaded: "&aConfiguration reloaded."
+  statusHeader: "&bBetter-IP-Filter status:"
+  proxyNotTrusted: "&cConnection denied: proxy is not trusted."
+
+proxy:
+  mode: "DIRECT" # DIRECT | BUNGEE | VELOCITY
+  trusted-forwarded-ips: []
+
+ratelimit:
+  enabled: true
+  window-seconds: 10
+  max-attempts: 5
+  message: "&cToo many connection attempts. Try again later."
+
+failsafe:
+  mode: "DENY_ALL" # DENY_ALL | ALLOW_ALL
+  message: "&cWhitelist unavailable. Try again later."
+
+logging:
+  denied: true
+  denied-to-file: true
+  file-name: "denied.log"
+
+webhook:
+  enabled: false
+  url: ""
+  on-denied: true
+  on-ratelimit: true
+  on-failsafe: true
+  timeout-ms: 3000
+  format: "JSON"
 ```
 
 ### Key options
 
 * `enabled` - enables or disables IP filtering globally
 * `messages` - fully customizable plugin messages (supports color codes)
+* `proxy.mode` - switch between direct and proxy modes (DIRECT/BUNGEE/VELOCITY)
+* `proxy.trusted-forwarded-ips` - list of trusted proxy IPs used as a gate
+* `ratelimit` - connection attempt throttling
+* `failsafe` - what to do when storage/proxy checks fail
+* `logging` - audit logging for denied connections
+* `webhook` - optional JSON notifications for denies
+
+### Whitelist entry formats
+
+Whitelist entries accept only IPv4 values in these formats:
+
+* Exact IP: `203.0.113.10`
+* CIDR block: `203.0.113.0/24`
+* Range: `203.0.113.10-203.0.113.50`
+
+Entries are normalized when saved to `ips.yml`.
 
 ---
 
@@ -77,6 +130,8 @@ messages:
 | `/ipf add <ip>`    | Add an IP to the whitelist      |
 | `/ipf remove <ip>` | Remove an IP from the whitelist |
 | `/ipf list`        | Show all whitelisted IPs        |
+| `/ipf status`      | Show plugin diagnostics         |
+| `/ipf reload`      | Reload config and whitelist     |
 | `/ipf on`          | Enable IP filtering             |
 | `/ipf off`         | Disable IP filtering            |
 
@@ -90,6 +145,8 @@ messages:
 | `betteripfilter.add`    | Add IPs               | OP      |
 | `betteripfilter.remove` | Remove IPs            | OP      |
 | `betteripfilter.list`   | View whitelist        | OP      |
+| `betteripfilter.status` | View status           | OP      |
+| `betteripfilter.reload` | Reload plugin data    | OP      |
 | `betteripfilter.toggle` | Enable/disable filter | OP      |
 
 > The plugin uses standard Bukkit permissions and works seamlessly with **LuckPerms**.
@@ -103,6 +160,11 @@ messages:
 * Whitelisted IPs are stored in memory (`HashSet`) for O(1) lookup
 * If the IP is not allowed, the connection is denied immediately
 * No permission bypass is used by design to keep checks fast and secure
+* Proxy mode does not parse forwarded headers. It relies on Paper/Proxy IP forwarding being configured, and
+  uses `proxy.trusted-forwarded-ips` as a gate for incoming proxy addresses.
+* Rate limiting throttles rapid login attempts based on source IP
+* Failsafe mode controls what happens when storage or proxy trust is unavailable
+* Denied log entries include IP addresses (privacy note: treat logs as sensitive)
 
 ---
 

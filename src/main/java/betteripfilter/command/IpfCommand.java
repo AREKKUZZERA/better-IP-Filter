@@ -33,6 +33,10 @@ public class IpfCommand implements CommandExecutor {
                 return handleRemove(sender, args);
             case "list":
                 return handleList(sender);
+            case "status":
+                return handleStatus(sender);
+            case "reload":
+                return handleReload(sender);
             case "on":
                 return handleToggle(sender, true);
             case "off":
@@ -51,13 +55,26 @@ public class IpfCommand implements CommandExecutor {
             sendUsage(sender);
             return true;
         }
+        if (!store.isAvailable()) {
+            sender.sendMessage(plugin.prefixed(plugin.msg("storeUnavailable")));
+            return true;
+        }
         String ip = args[1];
         if (!store.isValidIp(ip)) {
             sender.sendMessage(plugin.prefixed(plugin.msg("invalidIp").replace("{ip}", ip)));
             return true;
         }
-        store.add(ip);
-        sender.sendMessage(plugin.prefixed(plugin.msg("added").replace("{ip}", ip)));
+        if (store.contains(ip)) {
+            sender.sendMessage(plugin.prefixed(plugin.msg("alreadyExists").replace("{ip}", ip)));
+            return true;
+        }
+        if (store.add(ip)) {
+            sender.sendMessage(plugin.prefixed(plugin.msg("added").replace("{ip}", ip)));
+        } else if (!store.isAvailable()) {
+            sender.sendMessage(plugin.prefixed(plugin.msg("storeUnavailable")));
+        } else {
+            sender.sendMessage(plugin.prefixed(plugin.msg("failedUpdate").replace("{ip}", ip)));
+        }
         return true;
     }
 
@@ -69,15 +86,23 @@ public class IpfCommand implements CommandExecutor {
             sendUsage(sender);
             return true;
         }
+        if (!store.isAvailable()) {
+            sender.sendMessage(plugin.prefixed(plugin.msg("storeUnavailable")));
+            return true;
+        }
         String ip = args[1];
         if (!store.isValidIp(ip)) {
             sender.sendMessage(plugin.prefixed(plugin.msg("invalidIp").replace("{ip}", ip)));
             return true;
         }
-        if (store.remove(ip)) {
-            sender.sendMessage(plugin.prefixed(plugin.msg("removed").replace("{ip}", ip)));
-        } else {
+        if (!store.contains(ip)) {
             sender.sendMessage(plugin.prefixed(plugin.msg("notFound").replace("{ip}", ip)));
+        } else if (store.remove(ip)) {
+            sender.sendMessage(plugin.prefixed(plugin.msg("removed").replace("{ip}", ip)));
+        } else if (!store.isAvailable()) {
+            sender.sendMessage(plugin.prefixed(plugin.msg("storeUnavailable")));
+        } else {
+            sender.sendMessage(plugin.prefixed(plugin.msg("failedUpdate").replace("{ip}", ip)));
         }
         return true;
     }
@@ -92,7 +117,50 @@ public class IpfCommand implements CommandExecutor {
         if (ips.isEmpty()) {
             sender.sendMessage(plugin.prefixed(ChatColor.GRAY + "- (empty)"));
         } else {
-            sender.sendMessage(plugin.prefixed(String.join(", ", ips)));
+            int chunkSize = 10;
+            for (int i = 0; i < ips.size(); i += chunkSize) {
+                int end = Math.min(ips.size(), i + chunkSize);
+                sender.sendMessage(plugin.prefixed(String.join(", ", ips.subList(i, end))));
+            }
+        }
+        return true;
+    }
+
+    private boolean handleStatus(CommandSender sender) {
+        if (!hasPermission(sender, "betteripfilter.status")) {
+            return true;
+        }
+        sender.sendMessage(plugin.prefixed(plugin.msg("statusHeader")));
+        sender.sendMessage(plugin.prefixed("&7Enabled: &f" + plugin.isFilteringEnabled()));
+        sender.sendMessage(plugin.prefixed("&7Store available: &f" + store.isAvailable()));
+        sender.sendMessage(plugin.prefixed("&7Whitelist entries: &f" + store.list().size()));
+        sender.sendMessage(plugin.prefixed("&7Proxy mode: &f" + plugin.getProxyMode()
+                + " &7(trusted: &f" + plugin.getTrustedForwardedIpsCount() + "&7)"));
+        sender.sendMessage(plugin.prefixed("&7Rate limit: &f" + plugin.isRateLimitEnabled()
+                + " &7(window: &f" + (plugin.getRateLimitWindowMillis() / 1000L)
+                + "s&7, max: &f" + plugin.getRateLimitMaxAttempts() + "&7)"));
+        sender.sendMessage(plugin.prefixed("&7Failsafe mode: &f" + plugin.getFailsafeMode()));
+        sender.sendMessage(plugin.prefixed("&7Webhook enabled: &f" + plugin.isWebhookEnabled()
+                + " &7(configured: &f" + (plugin.isWebhookConfigured() ? "yes" : "no") + "&7)"));
+        return true;
+    }
+
+    private boolean handleReload(CommandSender sender) {
+        if (!hasPermission(sender, "betteripfilter.reload")) {
+            return true;
+        }
+        try {
+            plugin.reloadConfig();
+            plugin.loadSettings();
+            store.load();
+            if (store.isAvailable()) {
+                sender.sendMessage(plugin.prefixed(plugin.msg("reloaded")));
+            } else {
+                sender.sendMessage(plugin.prefixed(plugin.msg("failedUpdate")));
+            }
+        } catch (Exception ex) {
+            sender.sendMessage(plugin.prefixed(plugin.msg("failedUpdate")));
+            plugin.getLogger().warning("Failed to reload configuration: " + ex.getMessage());
         }
         return true;
     }
@@ -116,6 +184,6 @@ public class IpfCommand implements CommandExecutor {
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage(plugin.prefixed("&cUsage: /ipf <add|remove|list|on|off>"));
+        sender.sendMessage(plugin.prefixed("&cUsage: /ipf <add|remove|list|status|reload|on|off>"));
     }
 }

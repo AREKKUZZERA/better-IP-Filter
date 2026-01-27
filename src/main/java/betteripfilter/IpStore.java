@@ -151,6 +151,16 @@ public class IpStore {
         return parseEntry(entry) != null;
     }
 
+    public boolean contains(String entry) {
+        ParsedEntry parsed = parseEntry(entry);
+        if (parsed == null) {
+            return false;
+        }
+        synchronized (writeLock) {
+            return entries.contains(parsed.normalized);
+        }
+    }
+
     private void save() {
         if (!plugin.getDataFolder().exists() && !plugin.getDataFolder().mkdirs()) {
             plugin.getLogger().severe("Failed to create plugin data folder.");

@@ -27,6 +27,19 @@ public class IpFilterListener implements Listener {
         String ip = plugin.resolveClientIp(event);
         String name = event.getName();
 
+        boolean bypassWhitelist = false;
+        if (plugin.isProxyModeEnabled() && plugin.hasTrustedForwardedIps()) {
+            if (!plugin.isTrustedProxy(ip)) {
+                if (plugin.isFailsafeDenyAll()) {
+                    event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
+                            plugin.prefixed(plugin.msg("proxyNotTrusted")));
+                    plugin.handleDenied(DenyReason.PROXY_NOT_TRUSTED, name, ip);
+                    return;
+                }
+                bypassWhitelist = true;
+            }
+        }
+
         if (plugin.isRateLimitEnabled()) {
             if (!plugin.getRateLimiter().tryAcquire(ip, plugin.getRateLimitWindowMillis(),
                     plugin.getRateLimitMaxAttempts())) {
@@ -35,6 +48,10 @@ public class IpFilterListener implements Listener {
                 plugin.handleDenied(DenyReason.RATE_LIMIT, name, ip);
                 return;
             }
+        }
+
+        if (bypassWhitelist) {
+            return;
         }
 
         if (!store.isAvailable()) {
