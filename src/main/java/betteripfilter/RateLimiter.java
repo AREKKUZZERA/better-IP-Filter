@@ -1,10 +1,13 @@
 package betteripfilter;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RateLimiter {
+    private static final int CLEANUP_CHECK_INTERVAL = 64;
     private final ConcurrentHashMap<String, AttemptBucket> buckets = new ConcurrentHashMap<>();
     private final int cleanupThreshold;
+    private final AtomicInteger cleanupCounter = new AtomicInteger();
 
     public RateLimiter(int cleanupThreshold) {
         this.cleanupThreshold = cleanupThreshold;
@@ -26,7 +29,7 @@ public class RateLimiter {
         });
 
         boolean allowed = bucket.count <= maxAttempts;
-        if (buckets.size() > cleanupThreshold) {
+        if (buckets.size() > cleanupThreshold && cleanupCounter.incrementAndGet() % CLEANUP_CHECK_INTERVAL == 0) {
             cleanup(now, windowMillis);
         }
         return allowed;

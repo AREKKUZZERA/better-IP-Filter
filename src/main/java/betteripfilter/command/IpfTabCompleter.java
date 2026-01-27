@@ -21,7 +21,7 @@ public class IpfTabCompleter implements TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return filterPrefix(Arrays.asList("add", "remove", "list", "on", "off"), args[0]);
+            return filterPrefix(Arrays.asList("add", "remove", "list", "status", "reload", "on", "off"), args[0]);
         }
         if (args.length == 2 && "remove".equalsIgnoreCase(args[0])) {
             return filterPrefix(store.list(), args[1]);

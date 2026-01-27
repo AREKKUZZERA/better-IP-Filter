@@ -70,7 +70,7 @@ public class BetterIpFilterPlugin extends JavaPlugin {
         }
     }
 
-    private void loadSettings() {
+    public void loadSettings() {
         rateLimitEnabled = getConfig().getBoolean("ratelimit.enabled", true);
         int windowSeconds = Math.max(1, getConfig().getInt("ratelimit.window-seconds", 10));
         rateLimitWindowMillis = windowSeconds * 1000L;
@@ -94,7 +94,17 @@ public class BetterIpFilterPlugin extends JavaPlugin {
         webhookTimeoutMs = Math.max(500, getConfig().getInt("webhook.timeout-ms", 3000));
 
         proxyMode = getConfig().getString("proxy.mode", "DIRECT").toUpperCase(Locale.ROOT);
-        trustedForwardedIps = new HashSet<>(getConfig().getStringList("proxy.trusted-forwarded-ips"));
+        trustedForwardedIps = new HashSet<>();
+        for (String entry : getConfig().getStringList("proxy.trusted-forwarded-ips")) {
+            if (entry == null || entry.isBlank()) {
+                continue;
+            }
+            trustedForwardedIps.add(entry.trim());
+        }
+        if (!"DIRECT".equals(proxyMode) && trustedForwardedIps.isEmpty()) {
+            getLogger().warning("Proxy mode is enabled but proxy.trusted-forwarded-ips is empty. " +
+                    "Falling back to DIRECT behavior until trusted proxies are configured.");
+        }
 
         rateLimiter = new RateLimiter(RATE_LIMIT_CLEANUP_THRESHOLD);
         webhookNotifier = new WebhookNotifier(getLogger());
@@ -110,14 +120,28 @@ public class BetterIpFilterPlugin extends JavaPlugin {
     }
 
     public String resolveClientIp(AsyncPlayerPreLoginEvent event) {
-        String remoteIp = event.getAddress().getHostAddress();
-        if (!"DIRECT".equals(proxyMode)) {
-            if (!trustedForwardedIps.isEmpty() && trustedForwardedIps.contains(remoteIp)) {
-                return remoteIp;
-            }
-            return remoteIp;
-        }
-        return remoteIp;
+        // The plugin never parses forwarded headers. Paper/Proxy forwarding must be configured separately.
+        return event.getAddress().getHostAddress();
+    }
+
+    public boolean isProxyModeEnabled() {
+        return !"DIRECT".equals(proxyMode);
+    }
+
+    public boolean hasTrustedForwardedIps() {
+        return !trustedForwardedIps.isEmpty();
+    }
+
+    public boolean isTrustedProxy(String ip) {
+        return trustedForwardedIps.contains(ip);
+    }
+
+    public String getProxyMode() {
+        return proxyMode;
+    }
+
+    public int getTrustedForwardedIpsCount() {
+        return trustedForwardedIps.size();
     }
 
     public boolean isRateLimitEnabled() {
@@ -130,6 +154,10 @@ public class BetterIpFilterPlugin extends JavaPlugin {
 
     public int getRateLimitMaxAttempts() {
         return rateLimitMaxAttempts;
+    }
+
+    public String getFailsafeMode() {
+        return failsafeDenyAll ? "DENY_ALL" : "ALLOW_ALL";
     }
 
     public String getRateLimitMessage() {
@@ -146,6 +174,14 @@ public class BetterIpFilterPlugin extends JavaPlugin {
 
     public RateLimiter getRateLimiter() {
         return rateLimiter;
+    }
+
+    public boolean isWebhookEnabled() {
+        return webhookEnabled;
+    }
+
+    public boolean isWebhookConfigured() {
+        return webhookEnabled && webhookUrl != null && !webhookUrl.isBlank();
     }
 
     public void handleDenied(DenyReason reason, String name, String ip) {
@@ -172,6 +208,7 @@ public class BetterIpFilterPlugin extends JavaPlugin {
             case NOT_WHITELISTED -> webhookOnDenied;
             case RATE_LIMIT -> webhookOnRateLimit;
             case FAILSAFE -> webhookOnFailsafe;
+            case PROXY_NOT_TRUSTED -> webhookOnDenied;
         };
     }
 

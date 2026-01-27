@@ -5,11 +5,17 @@ messages:
   enabled: "&aIP filtering enabled."
   disabled: "&eIP filtering disabled."
   added: "&aAdded IP: &f{ip}"
+  alreadyExists: "&eIP already exists: &f{ip}"
   removed: "&aRemoved IP: &f{ip}"
   notFound: "&cIP not found: &f{ip}"
+  failedUpdate: "&cFailed to update whitelist."
+  storeUnavailable: "&cWhitelist storage unavailable."
   invalidIp: "&cInvalid IP address: &f{ip}"
-  listHeader: "&bWhitelisted IPs &7({count})&b:"
+  listHeader: "&bWhitelisted entries &7({count})&b:"
   noPermission: "&cYou do not have permission to do that."
+  reloaded: "&aConfiguration reloaded."
+  statusHeader: "&bBetter-IP-Filter status:"
+  proxyNotTrusted: "&cConnection denied: proxy is not trusted."
 proxy:
   mode: "DIRECT" # DIRECT | BUNGEE | VELOCITY
   trusted-forwarded-ips: []
